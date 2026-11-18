@@ -1,0 +1,53 @@
+services:
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: biblioteca
+      MYSQL_USER: biblioteca
+      MYSQL_PASSWORD: ${DB_PASSWORD:-demo-biblioteca}
+      MYSQL_RANDOM_ROOT_PASSWORD: "yes"
+    volumes:
+      - datos:/var/lib/mysql
+      - ./infra/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "MYSQL_PWD=$$MYSQL_PASSWORD mysql -u biblioteca biblioteca -e 'SELECT 1 FROM prestamos LIMIT 1'"]
+      interval: 5s
+      timeout: 5s
+      retries: 40
+  ldap:
+    image: osixia/openldap:1.5.0
+    command: --copy-service
+    environment:
+      LDAP_DOMAIN: xyz.edu
+      LDAP_ORGANISATION: Universidad XYZ
+      LDAP_ADMIN_PASSWORD: ${LDAP_ADMIN_PASSWORD:-demo-directorio}
+      LDAP_READONLY_USER: "true"
+      LDAP_READONLY_USER_USERNAME: lector
+      LDAP_READONLY_USER_PASSWORD: ${LDAP_READER_PASSWORD:-demo-lector}
+      LDAP_TLS: "false"
+    volumes:
+      - ./infra/usuarios.ldif:/container/service/slapd/assets/config/bootstrap/ldif/custom/50-usuarios.ldif:ro
+  correo:
+    image: axllent/mailpit:v1.21.8
+    ports: ["127.0.0.1:8025:8025"]
+  web:
+    build: .
+    depends_on:
+      mysql: {condition: service_healthy}
+      ldap: {condition: service_started}
+      correo: {condition: service_started}
+    ports: ["127.0.0.1:8080:8080"]
+    environment:
+      DB_PASSWORD: ${DB_PASSWORD:-demo-biblioteca}
+      LDAP_URL: ldap://ldap:389
+      LDAP_PEOPLE: ou=personas,dc=xyz,dc=edu
+      LDAP_BIND_DN: cn=lector,dc=xyz,dc=edu
+      LDAP_BIND_PASSWORD: ${LDAP_READER_PASSWORD:-demo-lector}
+      SMTP_HOST: correo
+      SMTP_PORT: 1025
+      SMTP_FROM: biblioteca@xyz.test
+    volumes:
+      - reportes:/opt/jboss/wildfly/standalone/data
+volumes:
+  datos:
+  reportes:

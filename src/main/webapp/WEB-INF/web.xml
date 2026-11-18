@@ -1,0 +1,6 @@
+<web-app xmlns="https://jakarta.ee/xml/ns/jakartaee" version="6.0">
+  <servlet><servlet-name>Faces</servlet-name><servlet-class>jakarta.faces.webapp.FacesServlet</servlet-class><load-on-startup>1</load-on-startup></servlet>
+  <servlet-mapping><servlet-name>Faces</servlet-name><url-pattern>*.xhtml</url-pattern></servlet-mapping>
+  <session-config><session-timeout>20</session-timeout><cookie-config><http-only>true</http-only></cookie-config><tracking-mode>COOKIE</tracking-mode></session-config>
+  <welcome-file-list><welcome-file>index.xhtml</welcome-file></welcome-file-list>
+</web-app>
