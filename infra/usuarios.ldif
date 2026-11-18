@@ -1,0 +1,30 @@
+dn: ou=personas,dc=xyz,dc=edu
+objectClass: organizationalUnit
+ou: personas
+
+dn: uid=operador,ou=personas,dc=xyz,dc=edu
+objectClass: inetOrgPerson
+uid: operador
+cn: operador
+sn: XYZ
+mail: operador@xyz.test
+employeeType: bibliotecario
+userPassword: DemoXYZ2026
+
+dn: uid=alumno,ou=personas,dc=xyz,dc=edu
+objectClass: inetOrgPerson
+uid: alumno
+cn: alumno
+sn: XYZ
+mail: alumno@xyz.test
+employeeType: estudiante-activo
+userPassword: DemoXYZ2026
+
+dn: uid=inactivo,ou=personas,dc=xyz,dc=edu
+objectClass: inetOrgPerson
+uid: inactivo
+cn: inactivo
+sn: XYZ
+mail: inactivo@xyz.test
+employeeType: estudiante-inactivo
+userPassword: DemoXYZ2026

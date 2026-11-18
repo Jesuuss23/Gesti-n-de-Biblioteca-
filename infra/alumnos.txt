@@ -1,0 +1,10 @@
+alumno01|Ana Torres
+alumno02|Luis Ramos
+alumno03|Camila Soto
+alumno04|Diego Rojas
+alumno05|Valeria Vega
+alumno06|Mateo Flores
+alumno07|Lucia Salas
+alumno08|Bruno Castro
+alumno09|Sofia Paredes
+alumno10|Daniel Luna

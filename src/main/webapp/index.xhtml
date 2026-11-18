@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="es" xmlns="http://www.w3.org/1999/xhtml" xmlns:h="jakarta.faces.html" xmlns:f="jakarta.faces.core" xmlns:ui="jakarta.faces.facelets" xmlns:pt="jakarta.faces.passthrough">
+<h:head><title>Biblioteca universitaria XYZ</title><meta name="viewport" content="width=device-width, initial-scale=1"/><h:outputStylesheet name="biblioteca.css"/></h:head>
+<h:body>
+<header><div><span>Universidad Tecnológica XYZ</span><h1>Biblioteca universitaria</h1></div>
+<h:form rendered="#{sesion.conectado}"><h:commandButton value="Cerrar sesión" action="#{sesion.salir}"/></h:form></header>
+<main><div role="status" aria-live="polite"><h:messages globalOnly="true"/></div>
+<h:panelGroup layout="block" rendered="#{!sesion.conectado}">
+  <section><h2>Acceso institucional</h2><h:form id="acceso">
+      <h:outputLabel for="codigo" value="Usuario institucional"/>
+      <h:inputText id="codigo" value="#{formulario.codigo}" required="true" requiredMessage="Complete este campo." maxlength="64"></h:inputText>
+      <h:message for="codigo" styleClass="error"/>
+      <h:outputLabel for="clave" value="Contraseña"/>
+      <h:inputSecret id="clave" value="#{formulario.clave}" required="true" requiredMessage="Complete este campo." maxlength="256"></h:inputSecret>
+      <h:message for="clave" styleClass="error"/>
+      <h:commandButton value="Ingresar" action="#{sesion.entrar(formulario.codigo,formulario.clave)}"/>
+  </h:form></section>
+</h:panelGroup>
+<h:panelGroup rendered="#{sesion.conectado}" layout="block">
+<section><h2>Catálogo</h2>
+<h:dataTable value="#{sesion.catalogo}" var="l">
+  <h:column rendered="#{sesion.personal}"><f:facet name="header">ID del libro</f:facet>#{l.id}</h:column>
+  <h:column><f:facet name="header">ISBN</f:facet>#{l.isbn}</h:column>
+  <h:column><f:facet name="header">Título</f:facet>#{l.titulo}</h:column>
+  <h:column><f:facet name="header">Autor</f:facet>#{l.autor}</h:column>
+  <h:column><f:facet name="header">Ejemplares</f:facet>#{l.ejemplares}</h:column>
+  <h:column rendered="#{sesion.personal}"><f:facet name="header">Disponibles</f:facet>#{opcionesPrestamo.stock[l.id]}</h:column>
+</h:dataTable></section>
+<h:panelGroup rendered="#{sesion.personal}" layout="block" styleClass="formularios">
+  <section><h2>Registrar libro</h2><h:form id="registro">
+      <h:outputLabel for="isbn" value="ISBN sin guiones"/>
+      <h:inputText id="isbn" value="#{formulario.isbn}" required="true" requiredMessage="Complete este campo." maxlength="13"><f:validator validatorId="isbn"/></h:inputText>
+      <h:message for="isbn" styleClass="error"/>
+      <h:outputLabel for="titulo" value="Título"/>
+      <h:inputText id="titulo" value="#{formulario.titulo}" required="true" requiredMessage="Complete este campo." maxlength="200"></h:inputText>
+      <h:message for="titulo" styleClass="error"/>
+      <h:outputLabel for="autor" value="Autor"/>
+      <h:inputText id="autor" value="#{formulario.autor}" required="true" requiredMessage="Complete este campo." maxlength="160"></h:inputText>
+      <h:message for="autor" styleClass="error"/>
+      <h:outputLabel for="cantidad" value="Cantidad de ejemplares"/>
+      <h:inputText id="cantidad" value="#{formulario.cantidad}" required="true" requiredMessage="Complete este campo." maxlength="7"><f:validateLongRange minimum="1" maximum="1000000"/></h:inputText>
+      <h:message for="cantidad" styleClass="error"/>
+      <h:commandButton value="Guardar libro" action="#{sesion.registrar(formulario.isbn,formulario.titulo,formulario.autor,formulario.cantidad)}"/>
+  </h:form></section>
+  <section><h2>Registrar préstamo</h2><h:form id="prestamo">
+      <h:outputLabel for="estudiante" value="Código institucional del estudiante"/>
+      <h:inputText pt:list="codigos-activos" id="estudiante" value="#{formulario.estudiante}" required="true" requiredMessage="Complete este campo." maxlength="64"></h:inputText>
+      <datalist id="codigos-activos"><ui:repeat value="#{opcionesPrestamo.alumnos}" var="a"><option value="#{a.key}">#{a.value}</option></ui:repeat></datalist>
+      <details><summary>Ver códigos y nombres de alumnos activos</summary>
+        <h:panelGroup rendered="#{empty opcionesPrestamo.alumnos}">Sin sugerencias disponibles. Puedes escribir el código institucional.</h:panelGroup>
+        <ul><ui:repeat value="#{opcionesPrestamo.alumnos}" var="a"><li>#{a.key} · #{a.value}</li></ui:repeat></ul>
+      </details>
+      <h:message for="estudiante" styleClass="error"/>
+      <h:outputLabel for="libro" value="Libro"/>
+      <h:selectOneMenu id="libro" value="#{formulario.libroId}" required="true"><f:selectItem itemLabel="Seleccione un libro" noSelectionOption="true" itemValue="#{null}"/><f:selectItems value="#{sesion.catalogo}" var="l" itemValue="#{l.id}" itemLabel="ID #{l.id} · #{l.titulo} · Disponibles: #{opcionesPrestamo.stock[l.id]}" itemDisabled="#{opcionesPrestamo.stock[l.id] le 0}"/></h:selectOneMenu>
+      <h:message for="libro" styleClass="error"/>
+      <h:outputLabel for="vence" value="Fecha de devolución"/>
+      <h:inputText id="vence" value="#{formulario.vence}" required="true" pt:type="date"><f:convertDateTime type="localDate" pattern="yyyy-MM-dd"/><f:validator validatorId="vencimiento"/></h:inputText>
+      <h:message for="vence" styleClass="error"/>
+      <h:commandButton value="Prestar" action="#{sesion.prestar(formulario.estudiante,formulario.libroId,formulario.vence)}"/>
+  </h:form></section>
+</h:panelGroup>
+<section><h2>Préstamos activos</h2>
+<h:form><h:dataTable value="#{sesion.activos}" var="p">
+  <h:column rendered="#{sesion.personal}"><f:facet name="header">ID del préstamo</f:facet>#{p.id}</h:column>
+  <h:column><f:facet name="header">Estudiante</f:facet>#{p.usuario.uid}</h:column>
+  <h:column><f:facet name="header">Libro</f:facet>#{p.libro.titulo}</h:column>
+  <h:column><f:facet name="header">Vencimiento</f:facet><h:outputText value="#{p.vence}"><f:convertDateTime type="localDate" pattern="dd/MM/yyyy"/></h:outputText></h:column>
+  <h:column rendered="#{sesion.personal}"><f:facet name="header">Devolución</f:facet><h:commandButton value="Registrar devolución" action="#{sesion.devolver(param.prestamoId)}"><f:param name="prestamoId" value="#{p.id}"/></h:commandButton></h:column>
+</h:dataTable></h:form></section>
+<h:form rendered="#{sesion.personal}"><h:commandButton value="Descargar reportes en Excel" action="#{sesion.descargar}"/></h:form>
+</h:panelGroup></main></h:body></html>

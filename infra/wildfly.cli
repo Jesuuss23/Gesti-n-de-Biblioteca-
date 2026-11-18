@@ -1,0 +1,5 @@
+module add --name=com.mysql --resources=/tmp/mysql.jar --dependencies=java.se,jakarta.transaction.api
+embed-server --server-config=standalone.xml --std-out=echo
+/subsystem=datasources/jdbc-driver=mysql:add(driver-name=mysql,driver-module-name=com.mysql,driver-class-name=com.mysql.cj.jdbc.Driver)
+/subsystem=datasources/data-source=BibliotecaDS:add(jndi-name=java:/BibliotecaDS,driver-name=mysql,connection-url="jdbc:mysql://mysql:3306/biblioteca?allowPublicKeyRetrieval=true&useSSL=false",user-name=biblioteca,password="${env.DB_PASSWORD:pendiente}",transaction-isolation=TRANSACTION_READ_COMMITTED)
+stop-embedded-server
