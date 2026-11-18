@@ -8,6 +8,10 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
+      - name: Acortar los intervalos de los temporizadores en el entorno de prueba
+        run: |
+          sed -i 's/hour="\*",minute="\*\/15"/hour="*",minute="*",second="*\/5"/' src/main/java/pe/edu/xyz/Avisos.java
+          sed -i 's/hour="6",minute="0"/hour="*",minute="*",second="*\/5"/' src/main/java/pe/edu/xyz/Reportes.java
       - name: Compilar y desplegar
         run: docker compose up -d --build
       - name: Verificar flujos

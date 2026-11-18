@@ -89,7 +89,7 @@ pagina = pulsar(pagina, "Registrar devolución", {"prestamoId": "1"}).decode()
 assert "Devolución registrada" in pagina and disponibilidad() == 2
 subprocess.run(["docker", "compose", "exec", "-T", "mysql", "sh", "-c",
                 'MYSQL_PWD="$MYSQL_PASSWORD" mysql -u biblioteca biblioteca'], check=True,
-               input=f"UPDATE prestamos SET inicio='{hoy-datetime.timedelta(days=8)}', vence='{hoy-datetime.timedelta(days=1)}' WHERE id=2;".encode())
+               input=f"UPDATE prestamos SET avisado=NULL, inicio='{hoy-datetime.timedelta(days=8)}', vence='{hoy-datetime.timedelta(days=1)}' WHERE id=2;".encode())
 xlsx = pulsar(pagina, "Descargar reportes en Excel")
 with zipfile.ZipFile(io.BytesIO(xlsx)) as libro_excel:
     for i, esperado in enumerate(["3", "1"], 1):
@@ -98,3 +98,27 @@ with zipfile.ZipFile(io.BytesIO(xlsx)) as libro_excel:
 pagina = ingreso(pulsar(pagina, "Cerrar sesión").decode(), "alumno")
 assert "Registrar devolución" not in pagina and "Joshua Bloch" in pagina
 print("LDAP, validadores JSF, préstamo, límite, devolución, API y Excel verificados.")
+
+# Ambos temporizadores se ejecutan cada cinco segundos únicamente en esta prueba.
+for intento in range(20):
+    mensajes = json.load(http.open("http://localhost:8025/api/v1/messages"))["messages"]
+    entregado = any(m["Subject"] == "Préstamo vencido" and
+                    any(d["Address"] == "alumno@xyz.test" for d in m["To"]) for m in mensajes)
+    if entregado:
+        break
+    time.sleep(2)
+else:
+    raise AssertionError("El buzón LDAP del estudiante no recibió el aviso de mora")
+
+for intento in range(15):
+    archivo = subprocess.run(["docker", "compose", "exec", "-T", "web", "cat",
+        f"/opt/jboss/wildfly/standalone/data/reportes/{hoy}.xlsx"], capture_output=True)
+    if archivo.returncode == 0:
+        with zipfile.ZipFile(io.BytesIO(archivo.stdout)) as diario:
+            vencidos = ET.fromstring(diario.read("xl/worksheets/sheet2.xml")).find(".//{*}c[@r='C2']/{*}v")
+            if vencidos is not None and vencidos.text in ("1", "1.0"):
+                break
+    time.sleep(2)
+else:
+    raise AssertionError("Falta el reporte programado de morosidad")
+print("Entrega SMTP y reporte programado verificados.")
