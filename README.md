@@ -17,9 +17,14 @@ Al ver el despliegue de `biblioteca.war`, abrir http://localhost:8080/biblioteca
 | --- | --- |
 | operador | Registrar libros, prestar, recibir devoluciones y exportar reportes |
 | alumno | Consultar el catálogo y sus préstamos activos |
+| alumno01 a alumno10 | Estudiantes activos de demostración |
 | inactivo | Comprobar el rechazo de estudiantes inactivos |
 
-Las tres cuentas del directorio local usan la contraseña **DemoXYZ2026**. El formulario autentica mediante bind LDAP y el préstamo vuelve a consultar el estado del estudiante. Para un directorio institucional, configurar `LDAP_URL` con LDAPS y un certificado de confianza, `LDAP_PEOPLE`, `LDAP_BIND_DN` y `LDAP_BIND_PASSWORD`. El mapeo implementado espera entradas `uid`, `mail` y `employeeType` con los valores del archivo `infra/usuarios.ldif`. El entorno Compose utiliza cuentas, transporte y buzón de laboratorio para uso local.
+Las cuentas del directorio local usan la contraseña **DemoXYZ2026**. El formulario autentica mediante bind LDAP y el préstamo vuelve a consultar el estado del estudiante. Para un directorio institucional, configurar `LDAP_URL` con LDAPS y un certificado de confianza, `LDAP_PEOPLE`, `LDAP_BIND_DN` y `LDAP_BIND_PASSWORD`. El mapeo implementado espera entradas `uid`, `mail` y `employeeType` con los valores del archivo `infra/usuarios.ldif`. El entorno Compose utiliza cuentas, transporte y buzón de laboratorio para uso local.
+
+## Datos para la exposición
+
+Al ejecutar `docker compose up -d`, se cargan **12 títulos ficticios con 45 ejemplares en total** y **10 estudiantes activos** con códigos `alumno01` a `alumno10`. La carga también funciona con volúmenes existentes y conserva las filas con el mismo ISBN o código institucional. Puedes ingresar como `operador`, elegir **Programación en Java** y prestar un ejemplar a `alumno01` (Ana Torres). Luego ingresa con esa cuenta para consultar su préstamo.
 
 ## Modelo JPA
 

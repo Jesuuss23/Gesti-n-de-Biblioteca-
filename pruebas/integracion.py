@@ -1,4 +1,4 @@
-"""Prueba HTTP de la instalación local desechable de Compose; requiere una BD vacía."""
+"""Prueba HTTP de la instalación local desechable de Compose; requiere una instalación nueva con los datos de demostración."""
 import datetime
 import http.cookiejar
 import io
@@ -51,8 +51,13 @@ def ingreso(html, uid):
     return pulsar(html, "Ingresar", {"acceso:codigo": uid, "acceso:clave": "DemoXYZ2026"}).decode()
 
 
+def sql(consulta):
+    return subprocess.check_output(["docker", "compose", "exec", "-T", "mysql", "sh", "-c",
+        'MYSQL_PWD="$MYSQL_PASSWORD" mysql -N -B -u biblioteca biblioteca'], input=consulta.encode()).decode().strip()
+
+
 def disponibilidad():
-    return json.load(http.open(URL + "api/libros/1/disponibilidad"))["disponibles"]
+    return json.load(http.open(URL + f"api/libros/{libro_id}/disponibilidad"))["disponibles"]
 
 
 for intento in range(90):
@@ -67,6 +72,12 @@ else:
     raise RuntimeError("No se desplegó la aplicación")
 
 assert "Acceso denegado" in ingreso(inicio, "inactivo")
+assert sql("SELECT COUNT(*), SUM(ejemplares) FROM libros") == "12\t45"
+assert sql("SELECT COUNT(*) FROM usuarios") == "10"
+for i in range(1, 11):
+    sesion = ingreso(http.open(URL).read().decode(), f"alumno{i:02d}")
+    assert "Cerrar sesión" in sesion and "Registrar devolución" not in sesion
+    pulsar(sesion, "Cerrar sesión")
 pagina = ingreso(http.open(URL).read().decode(), "operador")
 libro = {"registro:isbn": "9780134685990", "registro:titulo": "Java",
          "registro:autor": "Joshua Bloch", "registro:cantidad": "4"}
@@ -74,9 +85,10 @@ pagina = pulsar(pagina, "Guardar libro", libro).decode()
 assert "ISBN-10" in pagina
 libro["registro:isbn"] = "9780134685991"
 pagina = pulsar(pagina, "Guardar libro", libro).decode()
+libro_id = int(sql("SELECT id FROM libros WHERE isbn='9780134685991'"))
 assert "Libro registrado" in pagina and disponibilidad() == 4
 hoy = datetime.datetime.now(ZoneInfo("America/Lima")).date()
-prestamo = {"prestamo:estudiante": "alumno", "prestamo:libro": "1", "prestamo:vence": str(hoy)}
+prestamo = {"prestamo:estudiante": "alumno01", "prestamo:libro": str(libro_id), "prestamo:vence": str(hoy)}
 pagina = pulsar(pagina, "Prestar", prestamo).decode()
 assert "posterior a hoy" in pagina
 prestamo["prestamo:vence"] = str(hoy + datetime.timedelta(days=1))
@@ -95,7 +107,7 @@ with zipfile.ZipFile(io.BytesIO(xlsx)) as libro_excel:
     for i, esperado in enumerate(["3", "1"], 1):
         hoja = ET.fromstring(libro_excel.read(f"xl/worksheets/sheet{i}.xml"))
         assert hoja.find(".//{*}c[@r='C2']/{*}v").text in (esperado, esperado+".0")
-pagina = ingreso(pulsar(pagina, "Cerrar sesión").decode(), "alumno")
+pagina = ingreso(pulsar(pagina, "Cerrar sesión").decode(), "alumno01")
 assert "Registrar devolución" not in pagina and "Joshua Bloch" in pagina
 print("LDAP, validadores JSF, préstamo, límite, devolución, API y Excel verificados.")
 
@@ -103,7 +115,7 @@ print("LDAP, validadores JSF, préstamo, límite, devolución, API y Excel verif
 for intento in range(20):
     mensajes = json.load(http.open("http://localhost:8025/api/v1/messages"))["messages"]
     entregado = any(m["Subject"] == "Préstamo vencido" and
-                    any(d["Address"] == "alumno@xyz.test" for d in m["To"]) for m in mensajes)
+                    any(d["Address"] == "alumno01@xyz.test" for d in m["To"]) for m in mensajes)
     if entregado:
         break
     time.sleep(2)
@@ -122,3 +134,11 @@ for intento in range(15):
 else:
     raise AssertionError("Falta el reporte programado de morosidad")
 print("Entrega SMTP y reporte programado verificados.")
+
+for servicio in ("alumnos-demo", "catalogo-demo"):
+    subprocess.run(["docker", "compose", "run", "--rm", "--no-deps", servicio], check=True)
+assert sql("SELECT COUNT(*) FROM libros") == "13"
+assert sql("SELECT COUNT(*) FROM usuarios") == "10"
+assert sql("SELECT COUNT(*) FROM prestamos") == "3"
+assert disponibilidad() == 2
+print("Recarga verificada con datos y préstamos preexistentes.")

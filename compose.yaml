@@ -10,7 +10,7 @@ services:
       - datos:/var/lib/mysql
       - ./infra/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "MYSQL_PWD=$$MYSQL_PASSWORD mysql -u biblioteca biblioteca -e 'SELECT 1 FROM prestamos LIMIT 1'"]
+      test: ["CMD-SHELL", "MYSQL_PWD=$$MYSQL_PASSWORD mysql -h 127.0.0.1 -u biblioteca biblioteca -e 'SELECT 1 FROM prestamos LIMIT 1'"]
       interval: 5s
       timeout: 5s
       retries: 40
@@ -27,6 +27,24 @@ services:
       LDAP_TLS: "false"
     volumes:
       - ./infra/usuarios.ldif:/container/service/slapd/assets/config/bootstrap/ldif/custom/50-usuarios.ldif:ro
+  catalogo-demo:
+    image: mysql:8.4
+    depends_on:
+      mysql: {condition: service_healthy}
+    environment:
+      MYSQL_PWD: ${DB_PASSWORD:-demo-biblioteca}
+    volumes:
+      - ./infra/demo.sql:/demo.sql:ro
+    entrypoint: ["/bin/sh", "-c", "mysql -h mysql -u biblioteca biblioteca < /demo.sql"]
+  alumnos-demo:
+    image: osixia/openldap:1.5.0
+    depends_on: [ldap]
+    environment:
+      LDAP_ADMIN_PASSWORD: ${LDAP_ADMIN_PASSWORD:-demo-directorio}
+    volumes:
+      - ./infra/alumnos.sh:/demo/alumnos.sh:ro
+      - ./infra/alumnos.txt:/demo/alumnos.txt:ro
+    entrypoint: ["/bin/sh", "/demo/alumnos.sh"]
   correo:
     image: axllent/mailpit:v1.21.8
     ports: ["127.0.0.1:8025:8025"]
@@ -34,7 +52,8 @@ services:
     build: .
     depends_on:
       mysql: {condition: service_healthy}
-      ldap: {condition: service_started}
+      alumnos-demo: {condition: service_completed_successfully}
+      catalogo-demo: {condition: service_completed_successfully}
       correo: {condition: service_started}
     ports: ["127.0.0.1:8080:8080"]
     environment:
