@@ -13,6 +13,7 @@ import java.util.List;
 public class Sesion implements Serializable {
     @Inject private Directorio directorio;
     @Inject private Biblioteca biblioteca;
+    @Inject private OpcionesPrestamo opcionesPrestamo;
     @Inject private Reportes reportes;
     private String uid;
     private boolean personal;
@@ -40,19 +41,19 @@ public class Sesion implements Serializable {
     public List<Prestamo> getActivos() { return isConectado()?biblioteca.activos(personal?null:uid):List.of(); }
     public void registrar(String isbn,String titulo,String autor,int cantidad) {
         if (!personal) return;
-        try { biblioteca.registrar(isbn,titulo,autor,cantidad); mensaje("Libro registrado."); }
+        try { biblioteca.registrar(isbn,titulo,autor,cantidad); opcionesPrestamo.actualizarStock(); mensaje("Libro registrado."); }
         catch (Regla e) { mensaje(e.getMessage()); }
         catch (jakarta.ejb.EJBException e) { mensaje("No se pudo guardar. Compruebe si el ISBN ya existe."); }
     }
     public void prestar(String estudiante,long id,LocalDate vence) {
         if (!personal) return;
-        try { biblioteca.prestar(estudiante,id,vence); mensaje("Préstamo registrado."); }
+        try { biblioteca.prestar(estudiante,id,vence); opcionesPrestamo.actualizarStock(); mensaje("Préstamo registrado."); }
         catch (Regla e) { mensaje(e.getMessage()); }
         catch (javax.naming.NamingException e) { mensaje("No se pudo validar al estudiante en LDAP."); }
     }
     public void devolver(long id) {
         if (!personal) return;
-        try { biblioteca.devolver(id); mensaje("Devolución registrada."); }
+        try { biblioteca.devolver(id); opcionesPrestamo.actualizarStock(); mensaje("Devolución registrada."); }
         catch (Regla e) { mensaje(e.getMessage()); }
     }
     public void descargar() throws java.io.IOException {

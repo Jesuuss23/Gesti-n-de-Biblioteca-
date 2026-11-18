@@ -15,6 +15,16 @@ public class Biblioteca {
     public List<Libro> catalogo() {
         return em.createQuery("select l from Libro l order by l.titulo",Libro.class).getResultList();
     }
+    public java.util.Map<Long,Long> existencias() {
+        var stock = new java.util.HashMap<Long,Long>();
+        var filas = em.createQuery("""
+            select l.id, l.ejemplares - count(p.id) from Libro l
+            left join l.prestamos p on p.devuelto is null
+            group by l.id, l.ejemplares
+            """, Object[].class).getResultList();
+        for (Object[] fila : filas) stock.put((Long)fila[0], ((Number)fila[1]).longValue());
+        return stock;
+    }
     public Libro libro(long id) { return em.find(Libro.class,id); }
     public long ocupados(long id) {
         return em.createQuery("select count(p) from Prestamo p where p.libro.id=:id and p.devuelto is null",Long.class)

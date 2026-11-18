@@ -77,8 +77,11 @@ assert sql("SELECT COUNT(*) FROM usuarios") == "10"
 for i in range(1, 11):
     sesion = ingreso(http.open(URL).read().decode(), f"alumno{i:02d}")
     assert "Cerrar sesión" in sesion and "Registrar devolución" not in sesion
+    assert "Ver códigos y nombres" not in sesion and "Ana Torres" not in sesion
     pulsar(sesion, "Cerrar sesión")
 pagina = ingreso(http.open(URL).read().decode(), "operador")
+assert "alumno01 · Ana Torres" in pagina and "alumno10 · Daniel Luna" in pagina
+assert 'value="inactivo"' not in pagina and 'value="operador"' not in pagina
 libro = {"registro:isbn": "9780134685990", "registro:titulo": "Java",
          "registro:autor": "Joshua Bloch", "registro:cantidad": "4"}
 pagina = pulsar(pagina, "Guardar libro", libro).decode()
@@ -95,6 +98,7 @@ prestamo["prestamo:vence"] = str(hoy + datetime.timedelta(days=1))
 for cantidad in [3, 2, 1]:
     pagina = pulsar(pagina, "Prestar", prestamo).decode()
     assert "Préstamo registrado" in pagina and disponibilidad() == cantidad
+    assert f"ID {libro_id} · Java · Disponibles: {cantidad}" in pagina
 pagina = pulsar(pagina, "Prestar", prestamo).decode()
 assert "tres préstamos activos" in pagina
 pagina = pulsar(pagina, "Registrar devolución", {"prestamoId": "1"}).decode()

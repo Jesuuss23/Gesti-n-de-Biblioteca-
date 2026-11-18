@@ -38,6 +38,27 @@ public class Directorio {
         DirContext ctx = conectar(dn(uid), clave);
         try { return consultar(ctx, uid); } finally { ctx.close(); }
     }
+    public java.util.SortedMap<String,String> alumnosActivos() throws NamingException {
+        var alumnos = new java.util.TreeMap<String,String>();
+        DirContext ctx = conectar(System.getenv("LDAP_BIND_DN"), System.getenv("LDAP_BIND_PASSWORD"));
+        try {
+            var controles = new SearchControls();
+            controles.setSearchScope(SearchControls.ONELEVEL_SCOPE);
+            controles.setReturningAttributes(new String[]{"uid","cn"});
+            var resultados = ctx.search(System.getenv("LDAP_PEOPLE"),
+                "(&(employeeType=estudiante-activo)(!(employeeType=bibliotecario))(uid=*)(mail=*))", controles);
+            try {
+                while (resultados.hasMore()) {
+                    var atributos = resultados.next().getAttributes();
+                    String uid = atributos.get("uid").get().toString();
+                    if (UID.matcher(uid).matches()) alumnos.put(uid, atributos.get("cn").get().toString());
+                }
+            } catch (SizeLimitExceededException limite) {
+                // Las sugerencias son opcionales. También se admite escribir cualquier código activo.
+            } finally { resultados.close(); }
+        } finally { ctx.close(); }
+        return alumnos;
+    }
     public Cuenta estudiante(String uid) throws NamingException {
         DirContext ctx = conectar(System.getenv("LDAP_BIND_DN"), System.getenv("LDAP_BIND_PASSWORD"));
         try {
