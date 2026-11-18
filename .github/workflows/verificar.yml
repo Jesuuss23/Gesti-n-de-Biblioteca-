@@ -1,0 +1,17 @@
+name: Verificar biblioteca
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  integracion:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compilar y desplegar
+        run: docker compose up -d --build
+      - name: Verificar flujos
+        run: python3 pruebas/integracion.py
+      - name: Diagnóstico de despliegue
+        if: failure()
+        run: docker compose logs web
